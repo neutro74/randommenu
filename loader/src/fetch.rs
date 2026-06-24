@@ -1,8 +1,8 @@
 use std::ffi::{c_char, c_void, CString};
 
-// wininet handles for http requests
 type HINTERNET = *mut c_void;
 
+#[link(name = "wininet")]
 extern "system" {
     fn InternetOpenA(
         agent: *const c_char,

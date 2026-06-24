@@ -18,7 +18,7 @@ mod mono;
 mod gorilla;
 
 use std::sync::OnceLock;
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int};
 use mono::MonoBridge;
 use gorilla::{
     player::{GTPlayerCache, HandStateFields},
@@ -437,19 +437,3 @@ pub unsafe extern "C" fn gorilla_gamemode_is_actor_infected(actor_number: c_int)
     gm.is_player_infected(np_obj) as c_int
 }
 
-// ---------------------------------------------------------------------------
-// DLL entry point (Windows)
-// ---------------------------------------------------------------------------
-
-#[cfg(target_os = "windows")]
-#[no_mangle]
-pub unsafe extern "system" fn DllMain(
-    _hmodule: *mut c_void,
-    _fdw_reason: u32,
-    _lpv_reserved: *mut c_void,
-) -> i32 {
-    // DLL_PROCESS_ATTACH = 1
-    // Nothing to do here — gorilla_init() must be called explicitly after
-    // the game has loaded its assemblies.
-    1
-}
