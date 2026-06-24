@@ -2,6 +2,7 @@
 
 mod config;
 mod hook;
+mod input;
 mod mods;
 mod render;
 mod state;
@@ -115,6 +116,9 @@ pub unsafe extern "C" fn menu_start() {
     if result != GorillaResult::Ok && result != GorillaResult::AlreadyInitialised {
         return;
     }
+
+    // init OVR button input (finds OVRInput in Oculus.VR.dll)
+    input::init();
 
     // create the in-world Unity GameObjects for the menu panel
     render::init_render();

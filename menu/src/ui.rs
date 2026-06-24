@@ -2,6 +2,7 @@ use gorilla_api::{
     gorilla_player_get_position,
     gorilla_player_get_hand_position,
 };
+use crate::input;
 use crate::mods::ALL_MODS;
 use crate::render;
 use crate::state::STATE as get_state;
@@ -44,13 +45,13 @@ fn hand_in_button(hand: Vec3, btn: Vec3) -> bool {
     hand.dist(btn) < PRESS_RADIUS
 }
 
-// called every frame from the LateUpdate hook
 pub unsafe fn tick() {
     let mut state = match get_state().try_lock() {
         Ok(s) => s,
         Err(_) => return,
     };
 
+    // restore saved mod state on first tick
     if !state.loaded {
         state.load_from_disk();
         let enabled: Vec<String> = state.enabled.iter().cloned().collect();
@@ -61,10 +62,15 @@ pub unsafe fn tick() {
         }
     }
 
+    // Y button toggles menu open/closed
+    if input::y_button_down() {
+        state.open = !state.open;
+    }
+
+    // tick active mods
     let enabled: Vec<String> = state.enabled.iter().cloned().collect();
     drop(state);
 
-    // tick active mods
     for id in &enabled {
         if let Some(m) = ALL_MODS.iter().find(|m| m.id == id.as_str()) {
             if let Some(tick_fn) = m.tick {
@@ -73,44 +79,39 @@ pub unsafe fn tick() {
         }
     }
 
-    // gesture: hands very close = toggle menu
-    let mut lx = 0f32; let mut ly = 0f32; let mut lz = 0f32;
-    let mut rx = 0f32; let mut ry = 0f32; let mut rz = 0f32;
-    gorilla_player_get_hand_position(1, &mut lx, &mut ly, &mut lz);
-    gorilla_player_get_hand_position(0, &mut rx, &mut ry, &mut rz);
-    let left_hand  = Vec3 { x: lx, y: ly, z: lz };
-    let right_hand = Vec3 { x: rx, y: ry, z: rz };
-    let hands_close = left_hand.dist(right_hand) < 0.1;
-
+    // while menu is open, check if either hand is inside a button
     let mut state = match get_state().try_lock() {
         Ok(s) => s,
         Err(_) => return,
     };
 
-    if hands_close && !state.open {
-        state.open = true;
-    } else if !hands_close && state.open {
-        // check button presses while menu is open
+    if state.open {
         let mut hx = 0f32; let mut hy = 0f32; let mut hz = 0f32;
         gorilla_player_get_position(&mut hx, &mut hy, &mut hz);
         let head = Vec3 { x: hx, y: hy, z: hz };
         let btns = button_positions(head);
 
+        let mut lx = 0f32; let mut ly = 0f32; let mut lz = 0f32;
+        let mut rx = 0f32; let mut ry = 0f32; let mut rz = 0f32;
+        gorilla_player_get_hand_position(1, &mut lx, &mut ly, &mut lz);
+        gorilla_player_get_hand_position(0, &mut rx, &mut ry, &mut rz);
+        let left_hand  = Vec3 { x: lx, y: ly, z: lz };
+        let right_hand = Vec3 { x: rx, y: ry, z: rz };
+
         for (i, btn_pos) in btns.iter().enumerate() {
             if i >= ALL_MODS.len() { break; }
-            let mod_id = ALL_MODS[i].id;
             if hand_in_button(left_hand, *btn_pos) || hand_in_button(right_hand, *btn_pos) {
-                state.toggle(mod_id);
+                state.toggle(ALL_MODS[i].id);
             }
         }
     }
 
-    // update visual panel — get head pos for layout
     let mut hx = 0f32; let mut hy = 0f32; let mut hz = 0f32;
     gorilla_player_get_position(&mut hx, &mut hy, &mut hz);
     let enabled: Vec<String> = state.enabled.iter().cloned().collect();
     let selected = state.selected_index;
     let open = state.open;
     drop(state);
+
     render::update(open, hx, hy, hz, &enabled, selected);
 }

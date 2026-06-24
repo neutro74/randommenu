@@ -6,9 +6,7 @@ use crate::config;
 pub struct MenuState {
     pub open: bool,
     pub selected_index: usize,
-    // ids of enabled mods
     pub enabled: HashSet<String>,
-    // true after the first time state is loaded from disk
     pub loaded: bool,
 }
 
