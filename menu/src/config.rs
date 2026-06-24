@@ -8,22 +8,13 @@ extern "system" {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct MenuConfig {
-    // list of mod ids that are currently on
-    pub enabled_mods: Vec<String>,
-    // per-mod float settings e.g. {"speed_multiplier": 2.0}
-    pub mod_values: std::collections::HashMap<String, f32>,
-    // how the menu opens: "wrist" or "both_hands"
-    pub open_gesture: String,
+    pub enabled_bitmask: u32,
 }
 
-fn appdata_dir() -> PathBuf {
+fn config_dir() -> PathBuf {
     let mut buf = vec![0i8; 512];
     let len = unsafe {
-        GetEnvironmentVariableA(
-            b"APPDATA\0".as_ptr() as *const c_char,
-            buf.as_mut_ptr(),
-            512,
-        )
+        GetEnvironmentVariableA(b"APPDATA\0".as_ptr() as *const c_char, buf.as_mut_ptr(), 512)
     };
     if len > 0 {
         let s = unsafe { CStr::from_ptr(buf.as_ptr()) };
@@ -37,20 +28,17 @@ fn appdata_dir() -> PathBuf {
 }
 
 pub fn load() -> MenuConfig {
-    let path = appdata_dir().join("config.json");
+    let path = config_dir().join("config.json");
     if let Ok(data) = std::fs::read_to_string(&path) {
         if let Ok(cfg) = serde_json::from_str(&data) {
             return cfg;
         }
     }
-    MenuConfig {
-        open_gesture: "wrist".into(),
-        ..Default::default()
-    }
+    MenuConfig::default()
 }
 
 pub fn save(cfg: &MenuConfig) {
-    let path = appdata_dir().join("config.json");
+    let path = config_dir().join("config.json");
     if let Ok(s) = serde_json::to_string_pretty(cfg) {
         let _ = std::fs::write(path, s);
     }
