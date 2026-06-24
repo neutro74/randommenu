@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "gorilla_api"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [profile.release]
 opt-level = 3
