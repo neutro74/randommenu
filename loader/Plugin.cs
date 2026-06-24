@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -103,9 +102,11 @@ namespace RandomMenuLoader
             if (leftTrackerGO != null)
                 UpdateTrackerPositions();
 
-            // Y button = secondaryButton on left controller
-            var leftDev = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-            leftDev.TryGetFeatureValue(CommonUsages.secondaryButton, out bool yDown);
+            // read Y button from ControllerInputPoller — the game overwrites raw XR
+            // values with SteamVR action values in LateUpdate, so this is the only
+            // reliable source for button state
+            var poller = ControllerInputPoller.instance;
+            bool yDown = poller != null && poller.leftControllerSecondaryButton;
 
             if (yDown && !yWasDown)
             {
@@ -153,23 +154,20 @@ namespace RandomMenuLoader
 
         void UpdateTrackerPositions()
         {
-            var leftDev  = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-            var rightDev = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-
-            leftDev.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 lp);
-            leftDev.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion lr);
-            rightDev.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 rp);
-            rightDev.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rr);
-
-            leftTrackerGO.transform.SetPositionAndRotation(lp, lr);
-            rightTrackerGO.transform.SetPositionAndRotation(rp, rr);
+            var poller = ControllerInputPoller.instance;
+            if (poller == null) return;
+            leftTrackerGO.transform.SetPositionAndRotation(
+                poller.leftControllerPosition, poller.leftControllerRotation);
+            rightTrackerGO.transform.SetPositionAndRotation(
+                poller.rightControllerPosition, poller.rightControllerRotation);
         }
 
         void PositionMenu()
         {
-            var leftDev = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-            leftDev.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 pos);
-            leftDev.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rot);
+            var poller = ControllerInputPoller.instance;
+            if (poller == null) return;
+            Vector3    pos = poller.leftControllerPosition;
+            Quaternion rot = poller.leftControllerRotation;
             menuRoot.transform.position = pos + rot * new Vector3(0f, 0.1f, 0f);
             menuRoot.transform.rotation = rot * Quaternion.Euler(0f, 0f, 90f);
         }

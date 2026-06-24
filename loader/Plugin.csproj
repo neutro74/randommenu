@@ -34,5 +34,8 @@
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(GameAssemblyPath)\Unity.TextMeshPro.dll</HintPath>
     </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameAssemblyPath)\Assembly-CSharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
