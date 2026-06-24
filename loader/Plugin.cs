@@ -33,11 +33,11 @@ namespace RandomMenuLoader
         static readonly Color COL_ACCENT = new Color(0.30f, 0.70f, 1.00f, 1f);
         static readonly Color COL_WHITE  = new Color(0.95f, 0.95f, 1.00f, 1f);
 
-        uint  enabledBitmask = 0;
-        bool  menuOpen       = false;
-        bool  yWasDown       = false;
-        float buttonCooldown = 0f;
-        bool  menuDllReady   = false;
+        uint  enabledBitmask    = 0;
+        bool  menuOpen          = false;
+        float buttonCooldown    = 0f;
+        bool  menuDllReady      = false;
+        bool  callbackRegistered = false;
 
         // hand trackers: non-trigger colliders with kinematic Rigidbodies
         // they enter button trigger zones → OnTriggerEnter fires on the zone
@@ -99,28 +99,38 @@ namespace RandomMenuLoader
         {
             if (!menuDllReady) return;
 
+            // register callback once ControllerInputPoller is available
+            if (!callbackRegistered)
+            {
+                var poller = ControllerInputPoller.instance;
+                if (poller == null)
+                {
+                    Logger.LogInfo("randommenu: waiting for ControllerInputPoller...");
+                    return;
+                }
+                ControllerInputPoller.AddCallbackOnPressStart(
+                    EControllerInputPressFlags.Secondary, OnSecondaryPressed);
+                callbackRegistered = true;
+                Logger.LogInfo("randommenu: input callback registered");
+            }
+
             if (leftTrackerGO != null)
                 UpdateTrackerPositions();
-
-            // read Y button from ControllerInputPoller — the game overwrites raw XR
-            // values with SteamVR action values in LateUpdate, so this is the only
-            // reliable source for button state
-            var poller = ControllerInputPoller.instance;
-            bool yDown = poller != null && poller.leftControllerSecondaryButton;
-
-            if (yDown && !yWasDown)
-            {
-                menuOpen = !menuOpen;
-                Logger.LogInfo("randommenu: menu " + (menuOpen ? "opened" : "closed"));
-                if (menuOpen) DrawMenu();
-                else DestroyMenu();
-            }
-            yWasDown = yDown;
 
             if (menuOpen && menuRoot != null)
                 PositionMenu();
 
             menu_tick(enabledBitmask);
+        }
+
+        void OnSecondaryPressed(EHandednessFlags hands)
+        {
+            // only respond to left controller Y button
+            if ((hands & EHandednessFlags.Left) == 0) return;
+            menuOpen = !menuOpen;
+            Logger.LogInfo("randommenu: menu " + (menuOpen ? "opened" : "closed"));
+            if (menuOpen) DrawMenu();
+            else DestroyMenu();
         }
 
         void SpawnHandTrackers()
@@ -302,6 +312,8 @@ namespace RandomMenuLoader
 
         void OnDestroy()
         {
+            if (callbackRegistered)
+                ControllerInputPoller.RemoveCallbackOnPressStart(OnSecondaryPressed);
             DestroyMenu();
             if (leftTrackerGO  != null) Destroy(leftTrackerGO);
             if (rightTrackerGO != null) Destroy(rightTrackerGO);
