@@ -3,6 +3,7 @@ use gorilla_api::{
     gorilla_player_get_hand_position,
 };
 use crate::mods::ALL_MODS;
+use crate::render;
 use crate::state::STATE as get_state;
 
 const PRESS_RADIUS: f32 = 0.08;
@@ -103,4 +104,13 @@ pub unsafe fn tick() {
             }
         }
     }
+
+    // update visual panel — get head pos for layout
+    let mut hx = 0f32; let mut hy = 0f32; let mut hz = 0f32;
+    gorilla_player_get_position(&mut hx, &mut hy, &mut hz);
+    let enabled: Vec<String> = state.enabled.iter().cloned().collect();
+    let selected = state.selected_index;
+    let open = state.open;
+    drop(state);
+    render::update(open, hx, hy, hz, &enabled, selected);
 }

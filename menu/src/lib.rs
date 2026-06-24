@@ -3,6 +3,7 @@
 mod config;
 mod hook;
 mod mods;
+mod render;
 mod state;
 mod ui;
 
@@ -114,6 +115,9 @@ pub unsafe extern "C" fn menu_start() {
     if result != GorillaResult::Ok && result != GorillaResult::AlreadyInitialised {
         return;
     }
+
+    // create the in-world Unity GameObjects for the menu panel
+    render::init_render();
 
     // find and hook GorillaTagger.LateUpdate
     if let Some(late_update_ptr) = find_late_update_fn() {
